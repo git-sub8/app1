@@ -1,4 +1,4 @@
-name: Redeploy Vercel
+name: Redeploy Choreo
 
 on:
   workflow_dispatch:
@@ -7,30 +7,35 @@ on:
 
 jobs:
   Redeploy:
-    name: Redeploy Vercel
+    name: Redeploy Choreo
 
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v4.0.0
+        with:
+          fetch-depth: 1
+
       - name: Renew README.md
         run: |
             DATE=$(date "+%Y/%m/%d %H:%M:%S")
             echo "${DATE}" > README.md
             git checkout --orphan tmp_work
-            git branch -D main
-            git branch -m main
+            git branch -d main
             echo "DATE=${DATE}" >> $GITHUB_ENV
 
-      - name: Configure Git
-        run: |
-            git config --global user.name "Your Name"
-            git config --global user.email "your-email@example.com"
+      - name: Upload to repository
+        uses: stefanzweifel/git-auto-commit-action@v4.16.0
+        with:
+          commit_message: Auto deploy by Github Actions, ${{ env.DATE }}
+          create_branch: true
+          branch: main
+          push_options: --force
 
-      - name: Commit changes
-        run: |
-            git add -A
-            git commit -m "Auto deploy by GitHub Actions, ${{ env.DATE }}"
-
-      - name: Push changes
-        run: |
-            git push origin main
+      - name: Delete old workflow runs
+        uses: MajorScruffy/delete-old-workflow-runs@v0.3.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          repository: ${{ github.repository }}
+          older-than-seconds: 3600
